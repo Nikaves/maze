@@ -1,16 +1,22 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Unity WebGL Player | Maze</title>
-  <link rel="shortcut icon" href="TemplateData/favicon.ico">
-  <link rel="stylesheet" href="TemplateData/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes" />
+  <title>Maze | Unity WebGL in Telegram</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico" />
+  <link rel="stylesheet" href="TemplateData/style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    html,body { height:100%; margin:0; background:#000; }
+    #unity-container { position:fixed; inset:0; width:100%; height:100%; overflow:hidden; }
+    canvas { width:100%; height:100%; display:block; }
+    /* можно дополнительно подправить стиль загрузочного бара в TemplateData/style.css */
+  </style>
 </head>
 <body>
-  <div id="unity-container" style="position:absolute; width:100%; height:100%; left:0; top:0;">
-    <canvas id="unity-canvas" style="position:absolute; width:100%; height:100%;" tabindex="-1"></canvas>
+  <div id="unity-container">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
     <div id="unity-loading-bar">
       <div id="unity-logo"></div>
       <div id="unity-progress-bar-empty">
@@ -21,34 +27,23 @@
   </div>
 
   <script>
-    var container = document.querySelector("#unity-container");
-    var canvas = document.querySelector("#unity-canvas");
-    var loadingBar = document.querySelector("#unity-loading-bar");
-    var progressBarFull = document.querySelector("#unity-progress-bar-full");
-    var warningBanner = document.querySelector("#unity-warning");
+    const canvas = document.getElementById('unity-canvas');
+    const loadingBar = document.getElementById('unity-loading-bar');
+    const progressBarFull = document.getElementById('unity-progress-bar-full');
+    const warningBanner = document.getElementById('unity-warning');
 
     function unityShowBanner(msg, type) {
-      function updateBannerVisibility() {
-        warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-      }
-      var div = document.createElement('div');
+      const div = document.createElement('div');
       div.innerHTML = msg;
+      if (type === 'error') div.style = 'background:red;padding:8px;color:#fff';
+      else if (type === 'warning') div.style = 'background:yellow;padding:8px';
       warningBanner.appendChild(div);
-      if (type == 'error') div.style = 'background: red; padding: 10px;';
-      else {
-        if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-        setTimeout(function () {
-          warningBanner.removeChild(div);
-          updateBannerVisibility();
-        }, 5000);
-      }
-      updateBannerVisibility();
+      setTimeout(()=> { try { warningBanner.removeChild(div); } catch(e){} }, 5000);
     }
 
-    // ⚠️ Названия файлов должны совпадать с тем, что Unity сгенерировала в папке Build
-    var buildUrl = "Build";
-    var loaderUrl = buildUrl + "/Telegram.loader.js";
-    var config = {
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/Telegram.loader.js";
+    const config = {
       dataUrl: buildUrl + "/Telegram.data",
       frameworkUrl: buildUrl + "/Telegram.framework.js",
       codeUrl: buildUrl + "/Telegram.wasm",
@@ -56,52 +51,40 @@
       companyName: "DefaultCompany",
       productName: "Maze",
       productVersion: "1.0",
-      showBanner: unityShowBanner,
+      showBanner: unityShowBanner
     };
-
-    // 🔧 Поддержка мобильного Telegram браузера
-    var meta = document.createElement('meta');
-    meta.name = 'viewport';
-    meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-    document.getElementsByTagName('head')[0].appendChild(meta);
-    container.className = "unity-mobile";
-    canvas.className = "unity-mobile";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
 
     loadingBar.style.display = "block";
 
-    var script = document.createElement("script");
+    const script = document.createElement('script');
     script.src = loaderUrl;
     script.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        progressBarFull.style.width = 100 * progress + "%";
+        progressBarFull.style.width = (100 * progress) + "%";
       }).then((instance) => {
         loadingBar.style.display = "none";
         window.unityInstance = instance;
 
-        // ✅ Отправка данных пользователя Telegram в Unity
+        // Отправляем данные Telegram (если доступно)
         if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
-          const tgUser = Telegram.WebApp.initDataUnsafe.user;
-          if (tgUser) {
-            const payload = {
-              id: tgUser.id,
-              first_name: tgUser.first_name,
-              username: tgUser.username
-            };
-            instance.SendMessage("WebAppBridge", "OnTelegramUserData", JSON.stringify(payload));
+          const u = Telegram.WebApp.initDataUnsafe.user;
+          if (u) {
+            instance.SendMessage("WebAppBridge", "OnTelegramUserData", JSON.stringify({
+              id: u.id, first_name: u.first_name, username: u.username
+            }));
           } else {
-            console.warn("Нет данных пользователя Telegram.");
+            console.warn("initDataUnsafe.user == null");
           }
         } else {
-          console.warn("Telegram WebApp API недоступен. Запусти игру через Telegram.");
+          console.warn("Telegram.WebApp недоступен (открыто вне Telegram).");
         }
 
-      }).catch((message) => {
-        alert(message);
+      }).catch(err => {
+        console.error("createUnityInstance failed:", err);
+        unityShowBanner("Ошибка загрузки Unity: " + err, "error");
       });
     };
-
+    script.onerror = () => unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
     document.body.appendChild(script);
   </script>
 </body>
