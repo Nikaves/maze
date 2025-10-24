@@ -10,38 +10,109 @@
     #unity-container { position:fixed; inset:0; width:100%; height:100%; overflow:hidden; }
     canvas { width:100%; height:100%; display:block; }
     
+    /* Анимированный загрузочный экран */
     #unity-loading-bar {
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 200px;
+      width: 300px;
       text-align: center;
       color: white;
       font-family: Arial, sans-serif;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 40px 30px;
+      border-radius: 20px;
+      border: 2px solid transparent;
+      animation: borderGlow 2s infinite alternate;
     }
-    
+
+    @keyframes borderGlow {
+      0% { border-color: #ff0080; box-shadow: 0 0 20px rgba(255, 0, 128, 0.3); }
+      100% { border-color: #8000ff; box-shadow: 0 0 30px rgba(128, 0, 255, 0.5); }
+    }
+
+    /* Логотип - ЗАМЕНИТЕ НА СВОЙ */
     #unity-logo {
-      font-size: 18px;
-      margin-bottom: 15px;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px auto;
+      background: linear-gradient(135deg, #ff0080, #8000ff);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      animation: logoSpin 3s infinite linear;
+      box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
     }
-    
+
+    @keyframes logoSpin {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.1); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    /* Текст загрузки */
+    #loading-text {
+      font-size: 18px;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #ff0080, #8000ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textPulse 1.5s infinite alternate;
+    }
+
+    @keyframes textPulse {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    /* Прогресс-бар */
     #unity-progress-bar-empty {
       width: 100%;
-      height: 10px;
-      background: #333;
-      border-radius: 5px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
       overflow: hidden;
+      position: relative;
     }
-    
+
     #unity-progress-bar-full {
       width: 0%;
       height: 100%;
-      background: #2c7fe6;
-      border-radius: 5px;
-      transition: width 0.3s;
+      background: linear-gradient(90deg, #ff0080, #8000ff);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
-    
+
+    #unity-progress-bar-full::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      animation: progressShine 1.5s infinite;
+    }
+
+    @keyframes progressShine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Проценты */
+    #progress-percent {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    /* Предупреждения */
     #unity-warning {
       position: absolute;
       left: 50%;
@@ -59,10 +130,16 @@
   <div id="unity-container">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
     <div id="unity-loading-bar">
-      <div id="unity-logo">Загрузка игры...</div>
+      <!-- ЛОГОТИП - ЗАМЕНИТЕ НА СВОЙ -->
+      <div id="unity-logo">M</div>
+      
+      <div id="loading-text">Загрузка игры</div>
+      
       <div id="unity-progress-bar-empty">
         <div id="unity-progress-bar-full"></div>
       </div>
+      
+      <div id="progress-percent">0%</div>
     </div>
     <div id="unity-warning"></div>
   </div>
@@ -71,6 +148,7 @@
     const canvas = document.getElementById('unity-canvas');
     const loadingBar = document.getElementById('unity-loading-bar');
     const progressBarFull = document.getElementById('unity-progress-bar-full');
+    const progressPercent = document.getElementById('progress-percent');
     const warningBanner = document.getElementById('unity-warning');
 
     function unityShowBanner(msg, type) {
@@ -90,19 +168,18 @@
       }, 5000);
     }
 
-    // ПРАВИЛЬНЫЕ ПУТИ для вашего репозитория
-const buildUrl = "/maze/Build";
-const loaderUrl = buildUrl + "/Telegram.loader.js";  // Большая T!
-const config = {
-  dataUrl: buildUrl + "/telegram.data",              // Без .unityweb
-  frameworkUrl: buildUrl + "/telegram.framework.js", // Без .unityweb  
-  codeUrl: buildUrl + "/telegram.wasm",              // Без .unityweb
-  streamingAssetsUrl: "StreamingAssets",
-  companyName: "DefaultCompany",
-  productName: "Maze",
-  productVersion: "1.0",
-  showBanner: unityShowBanner
-};
+    const buildUrl = "/maze/Build";
+    const loaderUrl = buildUrl + "/Telegram.loader.js";
+    const config = {
+      dataUrl: buildUrl + "/telegram.data",
+      frameworkUrl: buildUrl + "/telegram.framework.js",
+      codeUrl: buildUrl + "/telegram.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "Maze",
+      productVersion: "1.0",
+      showBanner: unityShowBanner
+    };
 
     loadingBar.style.display = "block";
 
@@ -110,7 +187,9 @@ const config = {
     script.src = loaderUrl;
     script.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        progressBarFull.style.width = (100 * progress) + "%";
+        const percent = Math.round(progress * 100);
+        progressBarFull.style.width = percent + "%";
+        progressPercent.textContent = percent + "%";
       }).then((instance) => {
         loadingBar.style.display = "none";
         window.unityInstance = instance;
