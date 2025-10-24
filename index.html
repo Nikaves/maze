@@ -91,18 +91,18 @@
     }
 
     // ПРАВИЛЬНЫЕ ПУТИ для вашего репозитория
-    const buildUrl = "/maze/Build";
-    const loaderUrl = buildUrl + "/telegram.loader.js";
-    const config = {
-      dataUrl: buildUrl + "/telegram.data.unityweb",
-      frameworkUrl: buildUrl + "/telegram.framework.js.unityweb",
-      codeUrl: buildUrl + "/telegram.wasm.unityweb",
-      streamingAssetsUrl: "StreamingAssets",
-      companyName: "DefaultCompany",
-      productName: "Maze",
-      productVersion: "1.0",
-      showBanner: unityShowBanner
-    };
+const buildUrl = "/maze/Build";
+const loaderUrl = buildUrl + "/Telegram.loader.js";  // Большая T!
+const config = {
+  dataUrl: buildUrl + "/telegram.data",              // Без .unityweb
+  frameworkUrl: buildUrl + "/telegram.framework.js", // Без .unityweb  
+  codeUrl: buildUrl + "/telegram.wasm",              // Без .unityweb
+  streamingAssetsUrl: "StreamingAssets",
+  companyName: "DefaultCompany",
+  productName: "Maze",
+  productVersion: "1.0",
+  showBanner: unityShowBanner
+};
 
     loadingBar.style.display = "block";
 
