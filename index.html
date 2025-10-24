@@ -10,7 +10,6 @@
     #unity-container { position:fixed; inset:0; width:100%; height:100%; overflow:hidden; }
     canvas { width:100%; height:100%; display:block; }
     
-    /* Стили для загрузочного экрана */
     #unity-loading-bar {
       position: absolute;
       left: 50%;
@@ -91,13 +90,13 @@
       }, 5000);
     }
 
-    // Автоматическое определение путей для GitHub Pages
-    const buildUrl = "./Build";
+    // ПРАВИЛЬНЫЕ ПУТИ для вашего репозитория
+    const buildUrl = "/maze/Build";
     const loaderUrl = buildUrl + "/telegram.loader.js";
     const config = {
-      dataUrl: buildUrl + "/telegram.data",
-      frameworkUrl: buildUrl + "/telegram.framework.js",
-      codeUrl: buildUrl + "/telegram.wasm",
+      dataUrl: buildUrl + "/telegram.data.unityweb",
+      frameworkUrl: buildUrl + "/telegram.framework.js.unityweb",
+      codeUrl: buildUrl + "/telegram.wasm.unityweb",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "Maze",
@@ -109,45 +108,27 @@
 
     const script = document.createElement('script');
     script.src = loaderUrl;
-    
     script.onload = () => {
-      console.log("Loader loaded successfully");
       createUnityInstance(canvas, config, (progress) => {
-        console.log("Loading progress:", progress);
         progressBarFull.style.width = (100 * progress) + "%";
       }).then((instance) => {
-        console.log("Unity started successfully!");
         loadingBar.style.display = "none";
         window.unityInstance = instance;
 
-        // Отправляем данные Telegram (если доступно)
         if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
           const u = Telegram.WebApp.initDataUnsafe.user;
           if (u) {
             instance.SendMessage("WebAppBridge", "OnTelegramUserData", JSON.stringify({
-              id: u.id, 
-              first_name: u.first_name, 
-              username: u.username
+              id: u.id, first_name: u.first_name, username: u.username
             }));
-            console.log("Telegram user data sent:", u);
-          } else {
-            console.warn("initDataUnsafe.user == null");
           }
-        } else {
-          console.warn("Telegram.WebApp недоступен (открыто вне Telegram).");
         }
-
       }).catch(err => {
         console.error("createUnityInstance failed:", err);
-        unityShowBanner("Ошибка загрузки Unity: " + err.message, "error");
+        unityShowBanner("Ошибка загрузки Unity: " + err, "error");
       });
     };
-    
-    script.onerror = (err) => {
-      console.error("Failed to load loader script:", err);
-      unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
-    };
-    
+    script.onerror = () => unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
     document.body.appendChild(script);
   </script>
 </body>
