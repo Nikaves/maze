@@ -1,0 +1,22 @@
+[[headers]]
+  for = "/Build/telegram.data"
+  [headers.values]
+    Content-Type = "application/octet-stream"
+    Content-Encoding = "br"
+
+[[headers]]
+  for = "/Build/telegram.framework.js"
+  [headers.values]
+    Content-Type = "application/javascript" 
+    Content-Encoding = "br"
+
+[[headers]]
+  for = "/Build/telegram.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Content-Encoding = "br"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
