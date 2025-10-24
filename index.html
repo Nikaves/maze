@@ -91,13 +91,14 @@
       }, 5000);
     }
 
-const buildUrl = "Build";
-const loaderUrl = buildUrl + "/telegram.loader.js";
-const config = {
-  dataUrl: buildUrl + "/telegram.data",
-  frameworkUrl: buildUrl + "/telegram.framework.js",
-  codeUrl: buildUrl + "/telegram.wasm",
-  streamingAssetsUrl: "StreamingAssets",
+    // Автоматическое определение путей для GitHub Pages
+    const buildUrl = "./Build";
+    const loaderUrl = buildUrl + "/telegram.loader.js";
+    const config = {
+      dataUrl: buildUrl + "/telegram.data",
+      frameworkUrl: buildUrl + "/telegram.framework.js",
+      codeUrl: buildUrl + "/telegram.wasm",
+      streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "Maze",
       productVersion: "1.0",
@@ -108,10 +109,14 @@ const config = {
 
     const script = document.createElement('script');
     script.src = loaderUrl;
+    
     script.onload = () => {
+      console.log("Loader loaded successfully");
       createUnityInstance(canvas, config, (progress) => {
+        console.log("Loading progress:", progress);
         progressBarFull.style.width = (100 * progress) + "%";
       }).then((instance) => {
+        console.log("Unity started successfully!");
         loadingBar.style.display = "none";
         window.unityInstance = instance;
 
@@ -120,8 +125,11 @@ const config = {
           const u = Telegram.WebApp.initDataUnsafe.user;
           if (u) {
             instance.SendMessage("WebAppBridge", "OnTelegramUserData", JSON.stringify({
-              id: u.id, first_name: u.first_name, username: u.username
+              id: u.id, 
+              first_name: u.first_name, 
+              username: u.username
             }));
+            console.log("Telegram user data sent:", u);
           } else {
             console.warn("initDataUnsafe.user == null");
           }
@@ -131,10 +139,15 @@ const config = {
 
       }).catch(err => {
         console.error("createUnityInstance failed:", err);
-        unityShowBanner("Ошибка загрузки Unity: " + err, "error");
+        unityShowBanner("Ошибка загрузки Unity: " + err.message, "error");
       });
     };
-    script.onerror = () => unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
+    
+    script.onerror = (err) => {
+      console.error("Failed to load loader script:", err);
+      unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
+    };
+    
     document.body.appendChild(script);
   </script>
 </body>
