@@ -2,12 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, maximum-scale=1.0, minimum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes" />
   <meta name="screen-orientation" content="portrait">
-  <meta name="full-screen" content="yes">
-  <meta name="x5-fullscreen" content="true">
-  <meta name="x5-page-mode" content="app">
-  <meta name="browsermode" content="application">
   <title>Maze | Unity WebGL in Telegram</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -16,65 +12,67 @@
       padding: 0;
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
-      touch-action: none;
     }
 
     html, body {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       background: #000;
       position: fixed;
+    }
+
+    /* Основной контейнер - всегда портретный */
+    #unity-container {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
       top: 0;
       left: 0;
-    }
-
-    /* ЖЕСТКАЯ БЛОКИРОВКА ОРИЕНТАЦИИ */
-    body {
-      transform: rotate(0deg);
-      transform-origin: center center;
-    }
-
-    /* Принудительная портретная ориентация ВСЕГДА */
-    #unity-container {
-      position: fixed !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      top: 0 !important;
-      left: 0 !important;
-      transform: none !important;
       background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     #unity-canvas {
-      width: 100% !important;
-      height: 100% !important;
-      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
-    /* Если все же горизонтально - ЧЕРНЫЕ ПОЛОСЫ */
-    @media (orientation: landscape) {
-      body::before {
-        content: "ПОВЕРНИТЕ УСТРОЙСТВО В ВЕРТИКАЛЬНУЮ ПОЗИЦИЮ";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: Arial, sans-serif;
-        font-size: 18px;
-        text-align: center;
-        z-index: 9999;
-        padding: 20px;
-      }
-      
+    /* Сообщение для горизонтальной ориентации */
+    #orientation-warning {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: white;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 9999;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #orientation-warning .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    /* При горизонтальной ориентации показываем сообщение и скрываем игру */
+    @media (orientation: landscape) and (min-width: 768px) {
       #unity-container {
         display: none !important;
+      }
+      
+      #orientation-warning {
+        display: flex !important;
       }
     }
 
@@ -84,7 +82,8 @@
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 300px;
+      width: 80%;
+      max-width: 300px;
       text-align: center;
       color: white;
       font-family: Arial, sans-serif;
@@ -197,8 +196,16 @@
   </style>
 </head>
 <body>
+  <!-- Сообщение о повороте -->
+  <div id="orientation-warning">
+    <div class="icon">📱</div>
+    <h2>Пожалуйста, поверните устройство</h2>
+    <p>Игра работает только в вертикальной ориентации</p>
+  </div>
+
+  <!-- Контейнер Unity -->
   <div id="unity-container">
-    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <canvas id="unity-canvas" tabindex="-1" width="960" height="600"></canvas>
     <div id="unity-loading-bar">
       <div id="unity-logo">M</div>
       <div id="loading-text">Загрузка игры</div>
@@ -211,55 +218,69 @@
   </div>
 
   <script>
-    // ЖЕСТКАЯ БЛОКИРОВКА ОРИЕНТАЦИИ
-    function enforcePortrait() {
-      // Блокируем любые попытки изменения ориентации
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('portrait').catch(function(err) {
-          console.log('Orientation lock not supported');
-        });
+    // Функция для проверки и управления ориентацией
+    function handleOrientation() {
+      const warning = document.getElementById('orientation-warning');
+      const container = document.getElementById('unity-container');
+      
+      // Проверяем ориентацию
+      const isLandscape = window.innerWidth > window.innerHeight;
+      
+      if (isLandscape) {
+        // Горизонтальная ориентация - показываем предупреждение
+        warning.style.display = 'flex';
+        container.style.display = 'none';
+      } else {
+        // Вертикальная ориентация - показываем игру
+        warning.style.display = 'none';
+        container.style.display = 'flex';
+        
+        // Устанавливаем правильные размеры для canvas
+        adjustCanvasSize();
       }
-      
-      // Принудительно устанавливаем портретные размеры
-      function setPortraitSize() {
-        const container = document.getElementById('unity-container');
-        const canvas = document.getElementById('unity-canvas');
-        
-        // ВСЕГДА устанавливаем портретные размеры
-        const viewportWidth = Math.min(window.innerWidth, window.innerHeight);
-        const viewportHeight = Math.max(window.innerWidth, window.innerHeight);
-        
-        if (container) {
-          container.style.width = viewportWidth + 'px';
-          container.style.height = viewportHeight + 'px';
-        }
-        if (canvas) {
-          canvas.width = viewportWidth;
-          canvas.height = viewportHeight;
-          canvas.style.width = viewportWidth + 'px';
-          canvas.style.height = viewportHeight + 'px';
-        }
-        
-        // Если ориентация горизонтальная - показываем сообщение через CSS
-        if (window.innerWidth > window.innerHeight) {
-          document.body.classList.add('landscape-warning');
-        } else {
-          document.body.classList.remove('landscape-warning');
-        }
-      }
-      
-      // Вызываем сразу и при любых изменениях
-      setPortraitSize();
-      window.addEventListener('resize', setPortraitSize);
-      window.addEventListener('orientationchange', setPortraitSize);
-      
-      // Постоянная проверка
-      setInterval(setPortraitSize, 1000);
     }
 
-    // Запускаем блокировку сразу
-    document.addEventListener('DOMContentLoaded', enforcePortrait);
-    window.addEventListener('load', enforcePortrait);
+    // Функция для настройки размеров canvas
+    function adjustCanvasSize() {
+      const canvas = document.getElementById('unity-canvas');
+      const container = document.getElementById('unity-container');
+      
+      if (canvas && container) {
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Сохраняем соотношение сторон 9:16 (портрет)
+        const targetAspect = 9 / 16;
+        const currentAspect = containerWidth / containerHeight;
+        
+        if (currentAspect > targetAspect) {
+          // Слишком широко - добавляем черные полосы по бокам
+          const newWidth = containerHeight * targetAspect;
+          canvas.style.width = newWidth + 'px';
+          canvas.style.height = containerHeight + 'px';
+          canvas.style.margin = '0 auto';
+        } else {
+          // Слишком узко - заполняем всю высоту
+          canvas.style.width = containerWidth + 'px';
+          canvas.style.height = (containerWidth / targetAspect) + 'px';
+          canvas.style.margin = 'auto';
+        }
+      }
+    }
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', function() {
+      handleOrientation();
+      
+      // Обработчики событий
+      window.addEventListener('resize', handleOrientation);
+      window.addEventListener('orientationchange', function() {
+        setTimeout(handleOrientation, 100);
+      });
+      
+      // Периодическая проверка (на всякий случай)
+      setInterval(handleOrientation, 2000);
+    });
 
     // Оригинальный код Unity
     const canvas = document.getElementById('unity-canvas');
@@ -310,6 +331,9 @@
       }).then((instance) => {
         loadingBar.style.display = "none";
         window.unityInstance = instance;
+
+        // Корректируем размеры после загрузки
+        setTimeout(adjustCanvasSize, 100);
 
         if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
           const u = Telegram.WebApp.initDataUnsafe.user;
