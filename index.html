@@ -1,16 +1,68 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes" />
   <title>Maze | Unity WebGL in Telegram</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- ⬇⬇⬇ ДОБАВЬТЕ ЭТУ СТРОКУ ⬇⬇⬇ -->
-  <link rel="stylesheet" href="style.css">
   <style>
-    html,body { height:100%; margin:0; background:#000; }
-    #unity-container { position:fixed; inset:0; width:100%; height:100%; overflow:hidden; }
-    canvas { width:100%; height:100%; display:block; }
+    html,body { 
+      height:100%; 
+      margin:0; 
+      background:#000; 
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    
+    /* Принудительная портретная ориентация */
+    @media (orientation: landscape) {
+      #unity-container {
+        transform: rotate(90deg) translateY(-100%);
+        transform-origin: top left;
+        width: 100vh !important;
+        height: 100vw !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      
+      body {
+        width: 100vh;
+        height: 100vw;
+        transform: rotate(-90deg) translateX(-100%);
+        transform-origin: top left;
+      }
+    }
+
+    @media (orientation: portrait) {
+      #unity-container {
+        transform: none;
+        width: 100% !important;
+        height: 100% !important;
+      }
+    }
+
+    #unity-container { 
+      position:fixed; 
+      inset:0; 
+      width:100%; 
+      height:100%; 
+      overflow:hidden; 
+      background: #000;
+    }
+    
+    canvas { 
+      width:100%; 
+      height:100%; 
+      display:block; 
+    }
     
     /* Анимированный загрузочный экран */
     #unity-loading-bar {
@@ -27,9 +79,8 @@
       border-radius: 20px;
       border: 2px solid transparent;
       animation: borderGlow 2s infinite alternate;
+      z-index: 1000;
     }
-
-    /* ... остальной ваш CSS код без изменений ... */
 
     @keyframes borderGlow {
       0% { border-color: #ff0080; box-shadow: 0 0 20px rgba(255, 0, 128, 0.3); }
@@ -127,10 +178,41 @@
       border-radius: 5px;
       color: white;
       display: none;
+      z-index: 1001;
+    }
+
+    /* Сообщение о ориентации */
+    #orientation-warning {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 1002;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #orientation-warning .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
+  <div id="orientation-warning">
+    <div class="icon">📱</div>
+    <h2>Пожалуйста, поверните устройство</h2>
+    <p>Игра работает только в портретной ориентации</p>
+  </div>
+
   <div id="unity-container">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
     <div id="unity-loading-bar">
@@ -149,6 +231,94 @@
   </div>
 
   <script>
+    // Функции для блокировки ориентации
+    function lockOrientation() {
+      // Пытаемся заблокировать ориентацию через Screen Orientation API
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('portrait').catch(function(error) {
+          console.log('Orientation lock failed: ', error);
+          showOrientationWarning();
+        });
+      }
+      // Для старых браузеров
+      else if (screen.lockOrientation) {
+        screen.lockOrientation('portrait');
+      }
+      else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('portrait');
+      }
+      else if (screen.msLockOrientation) {
+        screen.msLockOrientation('portrait');
+      } else {
+        showOrientationWarning();
+      }
+    }
+
+    function checkOrientation() {
+      if (window.innerWidth > window.innerHeight) {
+        showOrientationWarning();
+      } else {
+        hideOrientationWarning();
+      }
+    }
+
+    function showOrientationWarning() {
+      document.getElementById('orientation-warning').style.display = 'flex';
+    }
+
+    function hideOrientationWarning() {
+      document.getElementById('orientation-warning').style.display = 'none';
+    }
+
+    // Принудительная установка портретных размеров
+    function forcePortraitSize() {
+      const container = document.getElementById('unity-container');
+      const canvas = document.getElementById('unity-canvas');
+      
+      if (window.innerHeight < window.innerWidth) {
+        // Горизонтальная ориентация - принудительно устанавливаем портретные размеры
+        if (container) {
+          container.style.width = '100vh';
+          container.style.height = '100vw';
+        }
+        if (canvas) {
+          canvas.style.width = '100vh';
+          canvas.style.height = '100vw';
+        }
+      } else {
+        // Вертикальная ориентация - нормальные размеры
+        if (container) {
+          container.style.width = '100vw';
+          container.style.height = '100vh';
+        }
+        if (canvas) {
+          canvas.style.width = '100vw';
+          canvas.style.height = '100vh';
+        }
+      }
+    }
+
+    // Инициализация блокировки ориентации
+    window.addEventListener('load', function() {
+      lockOrientation();
+      checkOrientation();
+      forcePortraitSize();
+    });
+
+    window.addEventListener('resize', function() {
+      checkOrientation();
+      forcePortraitSize();
+    });
+
+    window.addEventListener('orientationchange', function() {
+      setTimeout(function() {
+        checkOrientation();
+        forcePortraitSize();
+        lockOrientation(); // Повторная попытка блокировки
+      }, 100);
+    });
+
+    // Оригинальный код Unity
     const canvas = document.getElementById('unity-canvas');
     const loadingBar = document.getElementById('unity-loading-bar');
     const progressBarFull = document.getElementById('unity-progress-bar-full');
