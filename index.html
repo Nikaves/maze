@@ -22,7 +22,7 @@
       position: fixed;
     }
 
-    /* Основной контейнер - всегда портретный */
+    /* Контейнер занимает всю высоту и центрирует содержимое */
     #unity-container {
       position: fixed;
       width: 100vw;
@@ -35,10 +35,9 @@
       align-items: center;
     }
 
+    /* Canvas управляется Unity - НЕ ТРОГАЕМ его стили */
     #unity-canvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+      background: #000;
     }
 
     /* Сообщение для горизонтальной ориентации */
@@ -65,8 +64,8 @@
       margin-bottom: 20px;
     }
 
-    /* При горизонтальной ориентации показываем сообщение и скрываем игру */
-    @media (orientation: landscape) and (min-width: 768px) {
+    /* При горизонтальной ориентации показываем сообщение */
+    @media (orientation: landscape) {
       #unity-container {
         display: none !important;
       }
@@ -100,7 +99,6 @@
       100% { border-color: #8000ff; box-shadow: 0 0 30px rgba(128, 0, 255, 0.5); }
     }
 
-    /* Логотип */
     #unity-logo {
       width: 80px;
       height: 80px;
@@ -122,7 +120,6 @@
       100% { transform: rotate(360deg) scale(1); }
     }
 
-    /* Текст загрузки */
     #loading-text {
       font-size: 18px;
       margin-bottom: 20px;
@@ -137,7 +134,6 @@
       100% { opacity: 1; }
     }
 
-    /* Прогресс-бар */
     #unity-progress-bar-empty {
       width: 100%;
       height: 12px;
@@ -173,14 +169,12 @@
       100% { left: 100%; }
     }
 
-    /* Проценты */
     #progress-percent {
       margin-top: 10px;
       font-size: 14px;
       color: #ccc;
     }
 
-    /* Предупреждения */
     #unity-warning {
       position: absolute;
       left: 50%;
@@ -196,16 +190,14 @@
   </style>
 </head>
 <body>
-  <!-- Сообщение о повороте -->
   <div id="orientation-warning">
     <div class="icon">📱</div>
     <h2>Пожалуйста, поверните устройство</h2>
     <p>Игра работает только в вертикальной ориентации</p>
   </div>
 
-  <!-- Контейнер Unity -->
   <div id="unity-container">
-    <canvas id="unity-canvas" tabindex="-1" width="960" height="600"></canvas>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
     <div id="unity-loading-bar">
       <div id="unity-logo">M</div>
       <div id="loading-text">Загрузка игры</div>
@@ -218,71 +210,32 @@
   </div>
 
   <script>
-    // Функция для проверки и управления ориентацией
+    // Простая блокировка ориентации
     function handleOrientation() {
       const warning = document.getElementById('orientation-warning');
       const container = document.getElementById('unity-container');
       
-      // Проверяем ориентацию
       const isLandscape = window.innerWidth > window.innerHeight;
       
       if (isLandscape) {
-        // Горизонтальная ориентация - показываем предупреждение
         warning.style.display = 'flex';
         container.style.display = 'none';
       } else {
-        // Вертикальная ориентация - показываем игру
         warning.style.display = 'none';
         container.style.display = 'flex';
-        
-        // Устанавливаем правильные размеры для canvas
-        adjustCanvasSize();
-      }
-    }
-
-    // Функция для настройки размеров canvas
-    function adjustCanvasSize() {
-      const canvas = document.getElementById('unity-canvas');
-      const container = document.getElementById('unity-container');
-      
-      if (canvas && container) {
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        // Сохраняем соотношение сторон 9:16 (портрет)
-        const targetAspect = 9 / 16;
-        const currentAspect = containerWidth / containerHeight;
-        
-        if (currentAspect > targetAspect) {
-          // Слишком широко - добавляем черные полосы по бокам
-          const newWidth = containerHeight * targetAspect;
-          canvas.style.width = newWidth + 'px';
-          canvas.style.height = containerHeight + 'px';
-          canvas.style.margin = '0 auto';
-        } else {
-          // Слишком узко - заполняем всю высоту
-          canvas.style.width = containerWidth + 'px';
-          canvas.style.height = (containerWidth / targetAspect) + 'px';
-          canvas.style.margin = 'auto';
-        }
       }
     }
 
     // Инициализация
     document.addEventListener('DOMContentLoaded', function() {
       handleOrientation();
-      
-      // Обработчики событий
       window.addEventListener('resize', handleOrientation);
       window.addEventListener('orientationchange', function() {
         setTimeout(handleOrientation, 100);
       });
-      
-      // Периодическая проверка (на всякий случай)
-      setInterval(handleOrientation, 2000);
     });
 
-    // Оригинальный код Unity
+    // Оригинальный код Unity БЕЗ ИЗМЕНЕНИЙ
     const canvas = document.getElementById('unity-canvas');
     const loadingBar = document.getElementById('unity-loading-bar');
     const progressBarFull = document.getElementById('unity-progress-bar-full');
@@ -290,65 +243,59 @@
     const warningBanner = document.getElementById('unity-warning');
 
     function unityShowBanner(msg, type) {
-      const div = document.createElement('div');
-      div.innerHTML = msg;
-      if (type === 'error') div.style = 'background:red;padding:8px;color:#fff';
-      else if (type === 'warning') div.style = 'background:yellow;padding:8px;color:#000';
-      warningBanner.appendChild(div);
-      warningBanner.style.display = 'block';
-      setTimeout(()=> { 
-        try { 
-          warningBanner.removeChild(div); 
-          if (warningBanner.children.length === 0) {
-            warningBanner.style.display = 'none';
-          }
-        } catch(e){} 
-      }, 5000);
+      function updateBanner() {
+        warningBanner.style.display = 'block';
+      }
+      if (type == 'error') {
+        const lines = msg.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const div = document.createElement('div');
+          div.textContent = lines[i];
+          warningBanner.appendChild(div);
+        }
+        updateBanner();
+      } else {
+        updateBanner();
+      }
     }
 
-    const buildUrl = "/maze/Build";
+    const buildUrl = "Build";
     const loaderUrl = buildUrl + "/Telegram.loader.js";
     const config = {
-      dataUrl: buildUrl + "/telegram.data",
-      frameworkUrl: buildUrl + "/telegram.framework.js",
-      codeUrl: buildUrl + "/telegram.wasm",
+      dataUrl: buildUrl + "/Telegram.data",
+      frameworkUrl: buildUrl + "/Telegram.framework.js",
+      codeUrl: buildUrl + "/Telegram.wasm",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "Maze",
       productVersion: "1.0",
-      showBanner: unityShowBanner
+      showBanner: unityShowBanner,
     };
 
     loadingBar.style.display = "block";
 
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = loaderUrl;
     script.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        const percent = Math.round(progress * 100);
-        progressBarFull.style.width = percent + "%";
-        progressPercent.textContent = percent + "%";
-      }).then((instance) => {
+        progressBarFull.style.width = 100 * progress + "%";
+        progressPercent.textContent = Math.round(100 * progress) + "%";
+      }).then((unityInstance) => {
         loadingBar.style.display = "none";
-        window.unityInstance = instance;
-
-        // Корректируем размеры после загрузки
-        setTimeout(adjustCanvasSize, 100);
-
-        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
-          const u = Telegram.WebApp.initDataUnsafe.user;
-          if (u) {
-            instance.SendMessage("WebAppBridge", "OnTelegramUserData", JSON.stringify({
-              id: u.id, first_name: u.first_name, username: u.username
-            }));
+        
+        // Устанавливаем правильный размер canvas после загрузки Unity
+        setTimeout(() => {
+          if (window.innerHeight > window.innerWidth) {
+            // Портретная ориентация - позволяем Unity управлять размерами
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
           }
-        }
-      }).catch(err => {
-        console.error("createUnityInstance failed:", err);
-        unityShowBanner("Ошибка загрузки Unity: " + err, "error");
+        }, 100);
+        
+      }).catch((message) => {
+        alert(message);
       });
     };
-    script.onerror = () => unityShowBanner("Не удалось загрузить " + loaderUrl, "error");
     document.body.appendChild(script);
   </script>
 </body>
